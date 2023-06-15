@@ -48,7 +48,7 @@ class String(object):
     grammar = '"', attr('value', re.compile(r'[^"]*')), '"'
 
     def compose(self, parser):
-        return "'%s'" % self.value
+        return f"'{self.value}'"
 
 
 class InlineCode(object):
@@ -92,12 +92,10 @@ class Attributes(List):
             indented_paren = '{indent}{{}},\n'.format(indent=indent_str)
             return indented_paren if followed_by_children else ''
 
-        text = []
-        text.append('{indent}{{\n'.format(indent=indent_str))
+        text = ['{indent}{{\n'.format(indent=indent_str)]
         for entry in self:
             if not isinstance(entry, basestring):
-                text.append(entry.compose(parser, indent=indent+1))
-                text.append('\n')
+                text.extend((entry.compose(parser, indent=indent+1), '\n'))
         text.append('{indent}}},\n'.format(indent=indent_str))
 
         return ''.join(text)
@@ -109,11 +107,9 @@ class SelfClosingTag(object):
     grammar = '<', name(), attr('attributes', Attributes), ignore(whitespace), '/>'
 
     def get_name(self):
-        return "'%s'" % self.name
+        return f"'{self.name}'"
 
     def compose(self, parser, indent=0, first=False):
-        text = []
-
         indent_str = indent * int(not first) * "    "
         end_indent_str = indent * "    "
         indent_plus_str = (indent + 1) * "    "
@@ -122,22 +118,21 @@ class SelfClosingTag(object):
         paren_sep = '\n' if has_contents else ''
         contents_sep = ',\n' if has_contents else ''
 
-        text.append(
+        text = [
             "{indent}Elem({paren_sep}{indent_plus}{name}{contents_sep}".format(
                 indent=indent_str,
                 indent_plus=indent_plus_str if has_contents else '',
                 name=self.get_name(),
                 paren_sep=paren_sep,
                 contents_sep=contents_sep,
-            )
-        )
-        text.append(self.attributes.compose(parser, followed_by_children=False, indent=indent+1))
-        text.append(
+            ),
+            self.attributes.compose(
+                parser, followed_by_children=False, indent=indent + 1
+            ),
             "{indent})".format(
                 indent=end_indent_str if has_contents else '',
-            )
-        )
-
+            ),
+        ]
         return ''.join(text)
 
 
@@ -194,8 +189,6 @@ class PairedTag(object):
         return text, result
 
     def compose(self, parser, indent=0, first=False):
-        text = []
-
         indent_str = indent * int(not first) * "    "
         end_indent_str = indent * "    "
         indent_plus_str = (indent + 1) * "    "
@@ -206,25 +199,22 @@ class PairedTag(object):
         paren_sep = '\n' if has_contents else ''
         contents_sep = ',\n' if has_contents else ''
 
-        text.append(
+        text = [
             "{indent}Elem({paren_sep}{indent_plus}'{name}'{contents_sep}".format(
                 indent=indent_str,
                 indent_plus=indent_plus_str if has_contents else '',
                 name=self.name,
                 paren_sep=paren_sep,
-                contents_sep=contents_sep
-            )
-        )
-        text.append(
-            self.attributes.compose(parser, followed_by_children=has_children, indent=indent+1)
-        )
-        text.append(self.children.compose(parser, indent=indent+1))
-        text.append(
+                contents_sep=contents_sep,
+            ),
+            self.attributes.compose(
+                parser, followed_by_children=has_children, indent=indent + 1
+            ),
+            self.children.compose(parser, indent=indent + 1),
             "{indent})".format(
                 indent=end_indent_str if has_contents else '',
-                )
-            )
-
+            ),
+        ]
         return ''.join(text)
 
 
@@ -240,10 +230,7 @@ class TagChildren(List):
     def compose(self, parser, indent=0):
         text = []
         for entry in self:
-            # Skip pure whitespace
-            text.append(entry.compose(parser, indent=indent))
-            text.append(',\n')
-
+            text.extend((entry.compose(parser, indent=indent), ',\n'))
         return ''.join(text)
 
 
@@ -254,7 +241,7 @@ class PackedBlock(List):
 
     def compose(self, parser, attr_of=None):
         text = [self.line_start]
-        indent_text = re.match(r' *', self.line_start).group(0)
+        indent_text = re.match(r' *', self.line_start)[0]
         indent = len(indent_text) / 4
         for entry in self:
             if isinstance(entry, basestring):
@@ -315,11 +302,7 @@ def to_html(entity):
     if isinstance(entity, list):
         return ''.join(map(to_html, entity))
 
-    if hasattr(entity, 'to_html'):
-        return entity.to_html()
-    else:
-        # Assume unicode string or compatible
-        return unicode(entity)
+    return entity.to_html() if hasattr(entity, 'to_html') else unicode(entity)
 
 
 class Elem(object):
@@ -354,11 +337,9 @@ class Elem(object):
         )
 
         if attribute_text:
-            attribute_text = ' ' + attribute_text
+            attribute_text = f' {attribute_text}'
 
-        children_text = ''
-        if self.children:
-            children_text = ''.join(map(to_html, self.children))
+        children_text = ''.join(map(to_html, self.children)) if self.children else ''
         return "<{name}{attributes}>{children}</{name}>".format(
             name=self.name,
             attributes=attribute_text,
@@ -406,7 +387,7 @@ def translate_file(pyx_file, py_path):
     try:
         py_contents = translate(pkd_contents)
     except SyntaxError:
-        sys.stderr.write('Failed to convert: %s' % pyx_file)
+        sys.stderr.write(f'Failed to convert: {pyx_file}')
         return
 
     open(py_path, 'w').write(py_contents)
@@ -420,7 +401,7 @@ def main(args):
 
         for filename in files:
             if filename.endswith('.pyx'):
-                py_filename = '{}.py'.format(filename[:-4])
+                py_filename = f'{filename[:-4]}.py'
 
                 full_pkd_path = os.path.join(root, filename)
                 full_py_path = os.path.join(root, py_filename)
