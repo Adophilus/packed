@@ -36,10 +36,14 @@ class TestComponent(TestCase):
 
     def test_props(self):
 
+
+
+
         class MyComponent(Component):
 
             def render(self):
-                return 'My test property value: %s' % self.props['test']
+                return f"My test property value: {self.props['test']}"
+
 
         elem = Elem(MyComponent, {'test': 'test_value'})
 
