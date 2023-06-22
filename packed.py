@@ -41,7 +41,7 @@ class Whitespace(object):
 class Text(object):
     """Matches text between tags and/or inline code sections."""
 
-    value: str = ""
+    value: Optional[str] = None
     whitespace: Optional[str] = ""
     grammar = attr("whitespace", optional(whitespace)), attr(
         "value", re.compile(r"[^<{]+")
@@ -57,6 +57,7 @@ class Text(object):
 class String(object):
     """Matches a double-quote delimited string."""
 
+    value: Optional[str] = None
     grammar = '"', attr("value", re.compile(r'[^"]*')), '"'
 
     def compose(self, parser):
@@ -66,6 +67,7 @@ class String(object):
 class InlineCode(object):
     """Matches arbitrary Python code within a curly braces."""
 
+    code: Optional[str] = None
     grammar = "{", attr("code", re.compile(r"[^}]*")), "}"
 
     def compose(self, parser, indent=0):
