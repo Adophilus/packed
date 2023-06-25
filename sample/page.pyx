@@ -1,7 +1,7 @@
-import packed from packed
+from packed import packed
 
 @packed
-def page():
+def header():
     return (
         <div>
             <header>This is a header</header>
@@ -9,3 +9,13 @@ def page():
         </div>
     )
 
+def body():
+    return (
+        <main>
+            <div>
+                <p>
+                    This is the main body
+                </p>
+            </div>
+        </main>
+    )
